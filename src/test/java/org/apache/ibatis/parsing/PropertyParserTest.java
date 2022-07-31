@@ -20,8 +20,22 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
+/**
+ * 主要内容
+ * 1、设置默认值  props.setProperty(PropertyParser.KEY_ENABLE_DEFAULT_VALUE, "true");
+ * 2、设置分隔符  分割符默认是 ：  可以进行修改： props.setProperty(PropertyParser.KEY_DEFAULT_VALUE_SEPARATOR, "?:");
+ * 所以在有默认值的情况下：
+ *    ${key:aaa}  默认值是aaas 如果在Properties中没有找到对应的值,会用默认值代替,如果找到了对应的值,则使用对应的值
+ * 在不设置默认值时,会将 key:aaa 当作一个 整体 然后在Properties中找对应的value
+ *
+ *
+ */
 public class PropertyParserTest {
 
+  /**
+   * Assertions.assertThat 断言
+   *  开源的测试库
+   */
   @Test
   public void replaceToVariableValue() {
     Properties props = new Properties();
@@ -31,11 +45,15 @@ public class PropertyParserTest {
     props.setProperty("orderColumn", "member_id");
     props.setProperty("a:b", "c");
     Assertions.assertThat(PropertyParser.parse("${key}", props)).isEqualTo("value");
+    Assertions.assertThat(PropertyParser.parse("${smile:默认值}", props)).isEqualTo("默认值");
     Assertions.assertThat(PropertyParser.parse("${key:aaaa}", props)).isEqualTo("value");
     Assertions.assertThat(PropertyParser.parse("SELECT * FROM ${tableName:users} ORDER BY ${orderColumn:id}", props)).isEqualTo("SELECT * FROM members ORDER BY member_id");
 
+    //
     props.setProperty(PropertyParser.KEY_ENABLE_DEFAULT_VALUE, "false");
+
     Assertions.assertThat(PropertyParser.parse("${a:b}", props)).isEqualTo("c");
+//    Assertions.assertThat(PropertyParser.parse("${key:aaaa}", props)).isEqualTo("c");
 
     props.remove(PropertyParser.KEY_ENABLE_DEFAULT_VALUE);
     Assertions.assertThat(PropertyParser.parse("${a:b}", props)).isEqualTo("c");

@@ -24,6 +24,9 @@ import org.junit.jupiter.api.Test;
 
 public class XPathParserTest {
 
+  /**
+   * Assertions.assertEquals 方法判断期望值和结果值是否一致,不一致会报错
+   */
   @Test
   public void shouldTestXPathParserMethods() throws Exception {
     String resource = "resources/nodelet_test.xml";
