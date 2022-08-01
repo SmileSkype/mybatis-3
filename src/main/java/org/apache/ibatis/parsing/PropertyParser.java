@@ -96,25 +96,27 @@ public class PropertyParser {
       return (variables == null) ? defaultValue : variables.getProperty(key, defaultValue);
     }
 
+
     @Override
     public String handleToken(String content) {
       if (variables != null) {
         String key = content;
         // 如果开启默认值
         if (enableDefaultValue) {
-          // 查找默认值
+          // 默认分隔符的索引位置
           final int separatorIndex = content.indexOf(defaultValueSeparator);
           String defaultValue = null;
           if (separatorIndex >= 0) {
+            // 如果存在默认分隔符   找到key和默认的value
             key = content.substring(0, separatorIndex);
             defaultValue = content.substring(separatorIndex + defaultValueSeparator.length());
           }
-          // 有默认值,优先替换  不存在则返回默认值
+          // 有默认值,直接在variables里面查找，找不到用默认值返回
           if (defaultValue != null) {
             return variables.getProperty(key, defaultValue);
           }
         }
-        // 如果变量中包含key，直接替换
+        // 如果变量中包含key，直接返回
         if (variables.containsKey(key)) {
           return variables.getProperty(key);
         }
