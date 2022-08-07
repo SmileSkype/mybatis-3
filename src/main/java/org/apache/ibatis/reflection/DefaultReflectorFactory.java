@@ -37,10 +37,13 @@ public class DefaultReflectorFactory implements ReflectorFactory {
 
   @Override
   public Reflector findForClass(Class<?> type) {
+    // 如果开启缓存,则从reflectorMap中获取
     if (classCacheEnabled) {
             // synchronized (type) removed see issue #461
+      // 如果缓存中不存在,则创建返回
       return reflectorMap.computeIfAbsent(type, Reflector::new);
     } else {
+      // 关闭缓存,则创建Reflector对象
       return new Reflector(type);
     }
   }
