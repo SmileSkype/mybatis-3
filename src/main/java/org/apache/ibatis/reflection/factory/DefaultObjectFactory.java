@@ -76,7 +76,7 @@ public class DefaultObjectFactory implements ObjectFactory, Serializable {
           }
         }
       }
-      // <x2> 使用特定构造方法，创建指定类的对象
+      // <x2> 使用特定构造方法，创建指定类的对象,不存在指定的构造函数将会报错
       constructor = type.getDeclaredConstructor(constructorArgTypes.toArray(new Class[constructorArgTypes.size()]));
       try {
         return constructor.newInstance(constructorArgs.toArray(new Object[constructorArgs.size()]));

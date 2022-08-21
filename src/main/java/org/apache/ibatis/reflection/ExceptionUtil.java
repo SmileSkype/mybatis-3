@@ -20,6 +20,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 
 /**
  * @author Clinton Begin
+ * 异常工具类
  */
 public class ExceptionUtil {
 
@@ -27,6 +28,12 @@ public class ExceptionUtil {
     // Prevent Instantiation
   }
 
+  /**
+   * 去掉异常的包装
+   *
+   * @param wrapped 被包装的异常
+   * @return 去除包装后的异常
+   */
   public static Throwable unwrapThrowable(Throwable wrapped) {
     Throwable unwrapped = wrapped;
     while (true) {

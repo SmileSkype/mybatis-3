@@ -43,11 +43,14 @@ public class DefaultObjectFactoryTest {
     DefaultObjectFactory defaultObjectFactory = new DefaultObjectFactory();
     TestClass testClass = defaultObjectFactory.create(TestClass.class,
         Arrays.<Class<?>>asList(String.class, Integer.class), Arrays.<Object>asList("foo", 0));
-
-    Assertions.assertEquals((Integer) 0, testClass.myInteger, "myInteger didn't match expected");
+    // 期望值和真实值是否相等,不相等会报错
+    Assertions.assertEquals((Integer) 0, testClass.myInteger, "myInteger didn't match expected 1");
     Assertions.assertEquals("foo", testClass.myString, "myString didn't match expected");
   }
 
+  /**
+   * 这里进入catch的原因是TestClass只有 两个参数的构造参数,不存在一个的
+   */
   @Test
   public void createClassThrowsProperErrorMsg() {
     DefaultObjectFactory defaultObjectFactory = new DefaultObjectFactory();
@@ -61,6 +64,14 @@ public class DefaultObjectFactoryTest {
     }
   }
 
+  /**
+   * Map.class 默认用的是HashMap,HashMap中有无参构造函数,所以不会报错
+   * 默认使用的值可以参考：  org.apache.ibatis.reflection.factory.DefaultObjectFactory#resolveInterface(java.lang.Class)
+   * List,Collection,Iterable ---> ArrayList
+   * Map ---> HashMap
+   * SortedSet --->  TreeSet
+   * Set ---> HashSet
+   */
   @Test
   public void creatHashMap() throws  Exception{
      DefaultObjectFactory defaultObjectFactory=new DefaultObjectFactory();

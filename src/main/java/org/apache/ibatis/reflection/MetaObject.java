@@ -29,10 +29,16 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
  * @author Clinton Begin
+ * 对象元数据，提供了对象的属性值的获取和设置等方法,对BaseWrapper的进一步增强
  */
 public class MetaObject {
-
+  /**
+   * 原始 Object 对象
+   */
   private final Object originalObject;
+  /**
+   * 封装过的 Object 对象
+   */
   private final ObjectWrapper objectWrapper;
   private final ObjectFactory objectFactory;
   private final ObjectWrapperFactory objectWrapperFactory;
@@ -44,19 +50,34 @@ public class MetaObject {
     this.objectWrapperFactory = objectWrapperFactory;
     this.reflectorFactory = reflectorFactory;
 
+    // <1> 根据object的类型,设置objectWrapper的类型
     if (object instanceof ObjectWrapper) {
       this.objectWrapper = (ObjectWrapper) object;
     } else if (objectWrapperFactory.hasWrapperFor(object)) {
+      // <2> 因为默认情况下的 DefaultObjectWrapperFactory 未实现任何逻辑，所以这块逻辑相当于暂时不起作用。如果想要起作用，需要自定义 ObjectWrapperFactory 的实现类
+      // 创建 ObjectWrapper 对象
       this.objectWrapper = objectWrapperFactory.getWrapperFor(this, object);
     } else if (object instanceof Map) {
+      // 创建 MapWrapper 对象
       this.objectWrapper = new MapWrapper(this, (Map) object);
     } else if (object instanceof Collection) {
+      // 创建 CollectionWrapper 对象
       this.objectWrapper = new CollectionWrapper(this, (Collection) object);
     } else {
+      // 创建 BeanWrapper 对象 也是默认的
       this.objectWrapper = new BeanWrapper(this, object);
     }
   }
 
+  /**
+   * 创建 MetaObject 对象
+   *
+   * @param object 原始 Object 对象
+   * @param objectFactory
+   * @param objectWrapperFactory
+   * @param reflectorFactory
+   * @return MetaObject 对象
+   */
   public static MetaObject forObject(Object object, ObjectFactory objectFactory, ObjectWrapperFactory objectWrapperFactory, ReflectorFactory reflectorFactory) {
     if (object == null) {
       return SystemMetaObject.NULL_META_OBJECT;
@@ -109,40 +130,70 @@ public class MetaObject {
     return objectWrapper.hasGetter(name);
   }
 
+  /**
+   * 获取属性值
+   * 大体逻辑上，就是不断对 name 分词，递归查找属性，直到 <1> 处，返回最终的结果。
+   * 比较特殊的是，在 <2> 处，如果属性的值为 null 时，则直接返回 null ，因为值就是空的哈
+   */
   public Object getValue(String name) {
+    // 创建 PropertyTokenizer 对象，对 name 分词
     PropertyTokenizer prop = new PropertyTokenizer(name);
+    // 有子表达式
     if (prop.hasNext()) {
+      // 创建 MetaObject 对象
       MetaObject metaValue = metaObjectForProperty(prop.getIndexedName());
+      // <2> 递归判断子表达式 children ，获取值
       if (metaValue == SystemMetaObject.NULL_META_OBJECT) {
         return null;
       } else {
         return metaValue.getValue(prop.getChildren());
       }
     } else {
+      // 无子表达式
+      // <1> 获取值
       return objectWrapper.get(prop);
     }
   }
 
+  /**
+   * 设置指定属性的指定值
+   * @param name
+   * @param value
+   */
   public void setValue(String name, Object value) {
+    // 创建 PropertyTokenizer 对象，对 name 分词
     PropertyTokenizer prop = new PropertyTokenizer(name);
+    // 有子表达式
     if (prop.hasNext()) {
+      // 创建 MetaObject 对象
       MetaObject metaValue = metaObjectForProperty(prop.getIndexedName());
+      // 递归判断子表达式 children ，设置值
       if (metaValue == SystemMetaObject.NULL_META_OBJECT) {
         if (value == null) {
           // don't instantiate child path if value is null
           return;
         } else {
+          // <2> 创建值 如果属性的值为 null 时，调用 ObjectWrapper#instantiatePropertyValue(name, prop, objectFactory) 方法，创建当前 name 的 prop 属性的空对象，然后继续递归
           metaValue = objectWrapper.instantiatePropertyValue(name, prop, objectFactory);
         }
       }
+      // 设置值
       metaValue.setValue(prop.getChildren(), value);
     } else {
+      // 无子表达式 <1> 设置值
       objectWrapper.set(prop, value);
     }
   }
 
+  /**
+   * 创建指定属性的MetaObject
+   * @param name
+   * @return
+   */
   public MetaObject metaObjectForProperty(String name) {
+    // 获得属性值
     Object value = getValue(name);
+    // 创建 MetaObject 对象
     return MetaObject.forObject(value, objectFactory, objectWrapperFactory, reflectorFactory);
   }
 
