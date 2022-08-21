@@ -28,6 +28,14 @@ import org.apache.ibatis.datasource.DataSourceFactory;
 
 /**
  * @author Clinton Begin
+ * 实现了DataSourceFactory接口,基于JDNI的DataSourceFactory实现类
+ * JNDI – 这个数据源的实现是为了能在如 EJB 或应用服务器这类容器中使用，容器可以集中或在外部配置数据源，然后放置一个 JNDI 上下文的引用。这种数据源配置只需要两个属性：
+ *
+ * initial_context – 这个属性用来在 InitialContext 中寻找上下文（即，initialContext.lookup(initial_context)）。这是个可选属性，如果忽略，那么 data_source 属性将会直接从 InitialContext 中寻找。
+ * data_source – 这是引用数据源实例位置的上下文的路径。提供了 initial_context 配置时会在其返回的上下文中进行查找，没有提供时则直接在 InitialContext 中查找。
+ * 和其他数据源配置类似，可以通过添加前缀“env.”直接把属性传递给初始上下文。比如：
+ *    env.encoding=UTF8
+ * 这就会在初始上下文（InitialContext）实例化时往它的构造方法传递值为 UTF8 的 encoding 属性。
  */
 public class JndiDataSourceFactory implements DataSourceFactory {
 
@@ -37,17 +45,23 @@ public class JndiDataSourceFactory implements DataSourceFactory {
 
   private DataSource dataSource;
 
+  /**
+   * 从上下文中获取DataSource对象
+   * @param properties
+   */
   @Override
   public void setProperties(Properties properties) {
     try {
       InitialContext initCtx;
+      // <1> 获得系统 Properties 对象
       Properties env = getEnvProperties(properties);
+      // 创建 InitialContext 对象
       if (env == null) {
         initCtx = new InitialContext();
       } else {
         initCtx = new InitialContext(env);
       }
-
+      // 从 InitialContext 上下文中，获取 DataSource 对象
       if (properties.containsKey(INITIAL_CONTEXT)
           && properties.containsKey(DATA_SOURCE)) {
         Context ctx = (Context) initCtx.lookup(properties.getProperty(INITIAL_CONTEXT));

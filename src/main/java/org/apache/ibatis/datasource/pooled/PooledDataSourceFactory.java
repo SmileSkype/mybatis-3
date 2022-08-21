@@ -19,6 +19,8 @@ import org.apache.ibatis.datasource.unpooled.UnpooledDataSourceFactory;
 
 /**
  * @author Clinton Begin
+ * 继承UnpooledDataSourceFactory类,池化的DataSourceFactory实现类
+ *
  */
 public class PooledDataSourceFactory extends UnpooledDataSourceFactory {
 
