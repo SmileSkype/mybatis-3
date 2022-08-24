@@ -28,11 +28,24 @@ import org.apache.ibatis.cache.Cache;
  * Thanks to Dr. Heinz Kabutz for his guidance here.
  *
  * @author Clinton Begin
+ * 实现 Cache 接口，基于 java.lang.ref.WeakReference 的 Cache 实现类
  */
 public class WeakCache implements Cache {
+  /**
+   * 强引用的键的队列
+   */
   private final Deque<Object> hardLinksToAvoidGarbageCollection;
+  /**
+   * 被 GC 回收的 WeakEntry 集合，避免被 GC。
+   */
   private final ReferenceQueue<Object> queueOfGarbageCollectedEntries;
+  /**
+   * 装饰的 Cache 对象
+   */
   private final Cache delegate;
+  /**
+   * {@link #hardLinksToAvoidGarbageCollection} 的大小
+   */
   private int numberOfHardLinks;
 
   public WeakCache(Cache delegate) {
@@ -49,6 +62,7 @@ public class WeakCache implements Cache {
 
   @Override
   public int getSize() {
+    // 移除已经被 GC 回收的 WeakEntry
     removeGarbageCollectedItems();
     return delegate.getSize();
   }
@@ -59,22 +73,30 @@ public class WeakCache implements Cache {
 
   @Override
   public void putObject(Object key, Object value) {
+    // 移除已经被 GC 回收的 WeakEntry
     removeGarbageCollectedItems();
+    // 添加到 delegate 中
     delegate.putObject(key, new WeakEntry(key, value, queueOfGarbageCollectedEntries));
   }
 
   @Override
   public Object getObject(Object key) {
     Object result = null;
+    // 获得值的 WeakReference 对象
     @SuppressWarnings("unchecked") // assumed delegate cache is totally managed by this cache
     WeakReference<Object> weakReference = (WeakReference<Object>) delegate.getObject(key);
     if (weakReference != null) {
+      // 获得值
       result = weakReference.get();
       if (result == null) {
+        // 为空，从 delegate 中移除 。为空的原因是，意味着已经被 GC 回收
         delegate.removeObject(key);
       } else {
+        // 非空，添加到 hardLinksToAvoidGarbageCollection 中，避免被 GC
+        // 添加到 hardLinksToAvoidGarbageCollection 的队头
         hardLinksToAvoidGarbageCollection.addFirst(result);
         if (hardLinksToAvoidGarbageCollection.size() > numberOfHardLinks) {
+          // 超过上限，移除 hardLinksToAvoidGarbageCollection 的队尾
           hardLinksToAvoidGarbageCollection.removeLast();
         }
       }
@@ -84,14 +106,19 @@ public class WeakCache implements Cache {
 
   @Override
   public Object removeObject(Object key) {
+    // 超过上限，移除 hardLinksToAvoidGarbageCollection 的队尾
     removeGarbageCollectedItems();
+    // 移除出 delegate
     return delegate.removeObject(key);
   }
 
   @Override
   public void clear() {
+    // 清空 hardLinksToAvoidGarbageCollection
     hardLinksToAvoidGarbageCollection.clear();
+    // 移除已经被 GC 回收的 WeakEntry
     removeGarbageCollectedItems();
+    // 清空 delegate
     delegate.clear();
   }
 
@@ -100,6 +127,9 @@ public class WeakCache implements Cache {
     return null;
   }
 
+  /**
+   * 移除已经被 GC 回收的键
+   */
   private void removeGarbageCollectedItems() {
     WeakEntry sv;
     while ((sv = (WeakEntry) queueOfGarbageCollectedEntries.poll()) != null) {
@@ -108,6 +138,9 @@ public class WeakCache implements Cache {
   }
 
   private static class WeakEntry extends WeakReference<Object> {
+    /**
+     * 键
+     */
     private final Object key;
 
     private WeakEntry(Object key, Object value, ReferenceQueue<Object> garbageCollectionQueue) {
