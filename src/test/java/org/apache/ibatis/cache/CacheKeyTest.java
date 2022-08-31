@@ -82,11 +82,13 @@ public class CacheKeyTest {
   public void shouldTestCacheKeysWithBinaryArrays() throws Exception {
     byte[] array1 = new byte[] { 1 };
     byte[] array2 = new byte[] { 1 };
+    // 计算 Arrays.hashCode(byte[] arr) 是 用的是里面的数据来计算 hashCode的
     CacheKey key1 = new CacheKey(new Object[] { array1 });
     CacheKey key2 = new CacheKey(new Object[] { array2 });
     assertTrue(key1.equals(key2));
   }
 
+  // TODO 没太理解
   @Test
   public void serializationExceptionTest() throws Exception {
     CacheKey cacheKey = new CacheKey();
