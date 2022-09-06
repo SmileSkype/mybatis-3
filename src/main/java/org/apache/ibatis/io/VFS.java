@@ -31,14 +31,20 @@ import org.apache.ibatis.logging.LogFactory;
  * Provides a very simple API for accessing resources within an application server.
  *
  * @author Ben Gunter
+ * 虚拟文件系统(Virtual File System) 抽象类,用来查找指定路径下的文件们
  */
 public abstract class VFS {
   private static final Log log = LogFactory.getLog(VFS.class);
 
-  /** The built-in implementations. */
+  /** The built-in implementations.
+   * 静态属性，内置的 VFS 实现类的数组。目前 VFS 有 JBoss6VFS 和 DefaultVFS 两个实现类
+   * */
   public static final Class<?>[] IMPLEMENTATIONS = { JBoss6VFS.class, DefaultVFS.class };
 
-  /** The list to which implementations are added by {@link #addImplClass(Class)}. */
+  /**
+   * The list to which implementations are added by {@link #addImplClass(Class)}.
+   * 静态属性，自定义的 VFS 实现类的数组。可通过 #addImplClass(Class<? extends VFS> clazz) 方法，进行添加
+   * */
   public static final List<Class<? extends VFS>> USER_IMPLEMENTATIONS = new ArrayList<>();
 
   /** Singleton instance holder. */
@@ -53,6 +59,7 @@ public abstract class VFS {
       impls.addAll(Arrays.asList((Class<? extends VFS>[]) IMPLEMENTATIONS));
 
       // Try each implementation class until a valid one is found
+      // 创建 VFS 对象，选择最后一个符合的
       VFS vfs = null;
       for (int i = 0; vfs == null || !vfs.isValid(); i++) {
         Class<? extends VFS> impl = impls.get(i);
@@ -84,6 +91,7 @@ public abstract class VFS {
   /**
    * Get the singleton {@link VFS} instance. If no {@link VFS} implementation can be found for the
    * current environment, then this method returns null.
+   * 获得 VFS 单例
    */
   public static VFS getInstance() {
     return VFSHolder.INSTANCE;
@@ -101,7 +109,10 @@ public abstract class VFS {
     }
   }
 
-  /** Get a class by name. If the class is not found then return null. */
+  /**
+   * Get a class by name. If the class is not found then return null.
+   * 反射相关方法
+   * */
   protected static Class<?> getClass(String className) {
     try {
       return Thread.currentThread().getContextClassLoader().loadClass(className);
@@ -120,6 +131,7 @@ public abstract class VFS {
    * @param clazz The class to which the method belongs.
    * @param methodName The name of the method.
    * @param parameterTypes The types of the parameters accepted by the method.
+   * 反射相关方法
    */
   protected static Method getMethod(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
     if (clazz == null) {
@@ -145,6 +157,7 @@ public abstract class VFS {
    * @return Whatever the method returns.
    * @throws IOException If I/O errors occur
    * @throws RuntimeException If anything else goes wrong
+   *  反射相关方法
    */
   @SuppressWarnings("unchecked")
   protected static <T> T invoke(Method method, Object object, Object... parameters)
@@ -174,7 +187,10 @@ public abstract class VFS {
     return Collections.list(Thread.currentThread().getContextClassLoader().getResources(path));
   }
 
-  /** Return true if the {@link VFS} implementation is valid for the current environment. */
+  /**
+   * Return true if the {@link VFS} implementation is valid for the current environment.
+   * 抽象方法 判断是否为合法的 VFS
+   * */
   public abstract boolean isValid();
 
   /**
@@ -186,6 +202,7 @@ public abstract class VFS {
    *            value passed to {@link #getResources(String)} to get the resource URL.
    * @return A list containing the names of the child resources.
    * @throws IOException If I/O errors occur
+   * 该方法由子类实现
    */
   protected abstract List<String> list(URL url, String forPath) throws IOException;
 
@@ -196,10 +213,13 @@ public abstract class VFS {
    * @param path The path of the resource(s) to list.
    * @return A list containing the names of the child resources.
    * @throws IOException If I/O errors occur
+   * 获得指定路径下的所有资源
    */
   public List<String> list(String path) throws IOException {
     List<String> names = new ArrayList<>();
+    // 先调用 #getResources(String path) 静态方法，获得指定路径下的 URL 数组
     for (URL url : getResources(path)) {
+      // 后遍历 URL 数组，调用 #list(URL url, String forPath) 方法，递归的列出所有的资源们
       names.addAll(list(url, path));
     }
     return names;
