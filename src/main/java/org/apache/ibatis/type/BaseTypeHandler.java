@@ -34,6 +34,7 @@ import org.apache.ibatis.session.Configuration;
  * @author Clinton Begin
  * @author Simone Tripodi
  * @author Kzuki Shimizu
+ * 实现 TypeHandler 接口，继承 TypeReference 抽象类，TypeHandler 基础抽象类
  */
 public abstract class BaseTypeHandler<T> extends TypeReference<T> implements TypeHandler<T> {
 
@@ -53,6 +54,7 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
 
   @Override
   public void setParameter(PreparedStatement ps, int i, T parameter, JdbcType jdbcType) throws SQLException {
+    // <1> 参数为空时，设置为 null 类型
     if (parameter == null) {
       if (jdbcType == null) {
         throw new TypeException("JDBC requires that the JdbcType must be specified for all nullable parameters.");
@@ -65,6 +67,7 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
                 "Cause: " + e, e);
       }
     } else {
+      // 参数非空时，设置对应的参数
       try {
         setNonNullParameter(ps, i, parameter, jdbcType);
       } catch (Exception e) {
@@ -102,6 +105,9 @@ public abstract class BaseTypeHandler<T> extends TypeReference<T> implements Typ
     }
   }
 
+  /**
+   * 该方法由子类实现,当发现异常时,统一抛出TypeException异常
+   */
   public abstract void setNonNullParameter(PreparedStatement ps, int i, T parameter, JdbcType jdbcType) throws SQLException;
 
   public abstract T getNullableResult(ResultSet rs, String columnName) throws SQLException;
