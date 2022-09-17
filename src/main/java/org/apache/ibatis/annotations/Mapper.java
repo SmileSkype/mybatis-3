@@ -25,8 +25,9 @@ import java.lang.annotation.Target;
 
 /**
  * Marker interface for MyBatis mappers
- *
+ * 标记这是个 Mapper 的注解
  * @author Frank David Martínez
+ * 参考： https://blog.csdn.net/phenomenonsTell/article/details/79033144
  */
 @Documented
 @Inherited

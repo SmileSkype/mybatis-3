@@ -23,10 +23,15 @@ import java.lang.annotation.Target;
 
 /**
  * @author Clinton Begin
+ * Map 结果的键的注解
+ * 参考： https://blog.csdn.net/ClementAD/article/details/50589459
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface MapKey {
+  /**
+   * @return 键名
+   */
   String value();
 }

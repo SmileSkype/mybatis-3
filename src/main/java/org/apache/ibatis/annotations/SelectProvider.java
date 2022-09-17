@@ -23,12 +23,20 @@ import java.lang.annotation.Target;
 
 /**
  * @author Clinton Begin
+ * 查询语句提供器
+ * XXXProvider 的用途是，指定一个类( type )的指定方法( method )，返回使用的 SQL 。并且，该方法可以使用 Map<String,Object> params 来作为方法参数，传递参数
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface SelectProvider {
+  /**
+   * @return 提供的类
+   */
   Class<?> type();
 
+  /**
+   * @return 提供的方法
+   */
   String method();
 }

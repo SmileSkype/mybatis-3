@@ -23,10 +23,20 @@ import java.lang.annotation.Target;
 
 /**
  * @author Jeff Butler
+ * 使用的结果集的注解
+ * @SelectProvider(type = BlogSqlProvider.class, method = "getSqlByTitle")
+ *     @ResultMap(value = "sqlBlogsMap")
+ *     // 这里调用resultMap，这个是SQL配置文件中的,必须该SQL配置文件与本接口有相同的全限定名
+ *     // 注意文件中的namespace路径必须是使用@resultMap的类路径
+ *     public List<Blog> getBlogByTitle(@Param("title")String title);
+ *
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface ResultMap {
+  /**
+   * @return 结果集,需要在对应的XML有相应的内容
+   */
   String[] value();
 }

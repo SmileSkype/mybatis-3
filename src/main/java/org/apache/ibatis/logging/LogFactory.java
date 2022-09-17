@@ -20,6 +20,7 @@ import java.lang.reflect.Constructor;
 /**
  * @author Clinton Begin
  * @author Eduardo Macarron
+ * Log工厂类
  */
 public final class LogFactory {
 
@@ -27,10 +28,13 @@ public final class LogFactory {
    * Marker to be used by logging implementations that support markers
    */
   public static final String MARKER = "MYBATIS";
-
+  /**
+   * 使用的 Log 的构造方法
+   */
   private static Constructor<? extends Log> logConstructor;
 
   static {
+    // <1> 逐个尝试，判断使用哪个 Log 的实现类，即初始化 logConstructor 属性
     tryImplementation(LogFactory::useSlf4jLogging);
     tryImplementation(LogFactory::useCommonsLogging);
     tryImplementation(LogFactory::useLog4J2Logging);
@@ -55,6 +59,10 @@ public final class LogFactory {
     }
   }
 
+  /**
+   * 设置自定义的Log实现类
+   * @param clazz
+   */
   public static synchronized void useCustomLogging(Class<? extends Log> clazz) {
     setImplementation(clazz);
   }
@@ -87,6 +95,17 @@ public final class LogFactory {
     setImplementation(org.apache.ibatis.logging.nologging.NoLoggingImpl.class);
   }
 
+  /**
+   * 当 logConstructor 为空时，执行 runnable 的方法。那么，runnable 怎么来的呢。
+   * 实际上，<1> 处，使用了 Lambda 表达式，所以看起来不是很清晰。
+   * 即 tryImplementation(LogFactory::useSlf4jLogging) 代码块，对应为
+   tryImplementation(new Runnable() {
+    @Override
+        public void run() {
+            LogFactory.useSlf4jLogging();
+        }
+    });
+   */
   private static void tryImplementation(Runnable runnable) {
     if (logConstructor == null) {
       try {
@@ -99,11 +118,14 @@ public final class LogFactory {
 
   private static void setImplementation(Class<? extends Log> implClass) {
     try {
+      // 获得参数为 String 的构造方法
       Constructor<? extends Log> candidate = implClass.getConstructor(String.class);
+      // 创建 Log 对象
       Log log = candidate.newInstance(LogFactory.class.getName());
       if (log.isDebugEnabled()) {
         log.debug("Logging initialized using '" + implClass + "' adapter.");
       }
+      // 创建成功，意味着可以使用，设置为 logConstructor
       logConstructor = candidate;
     } catch (Throwable t) {
       throw new LogException("Error setting Log implementation.  Cause: " + t, t);

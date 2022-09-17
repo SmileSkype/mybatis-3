@@ -17,6 +17,7 @@ package org.apache.ibatis.logging;
 
 /**
  * @author Clinton Begin
+ * Log 的实现类较多，我们就看看 Slf4jImpl 和 StdOutImpl 这两个实现类
  */
 public interface Log {
 

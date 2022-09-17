@@ -29,10 +29,14 @@ import java.lang.annotation.Target;
  *
  * @since 3.2.0
  * @author Jeff Butler
+ * 结果类型
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface ResultType {
+  /**
+   * @return 类型
+   */
   Class<?> value();
 }

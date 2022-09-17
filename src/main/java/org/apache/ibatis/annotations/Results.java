@@ -23,6 +23,14 @@ import java.lang.annotation.Target;
 
 /**
  * @author Clinton Begin
+ * 结果的注解  对应 XML 标签为 <resultMap />
+ * @Results(value ={
+ *             @Result(id=true, property="id",column="id",javaType=Integer.class,jdbcType=JdbcType.INTEGER),
+ *             @Result(property="title",column="title",javaType=String.class,jdbcType=JdbcType.VARCHAR),
+ *             @Result(property="date",column="date",javaType=String.class,jdbcType=JdbcType.VARCHAR),
+ *             @Result(property="authername",column="authername",javaType=String.class,jdbcType=JdbcType.VARCHAR),
+ *             @Result(property="content",column="content",javaType=String.class,jdbcType=JdbcType.VARCHAR),
+ *             })
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
@@ -32,5 +40,8 @@ public @interface Results {
    * The name of the result map.
    */
   String id() default "";
+  /**
+   * @return {@link Result} 数组
+   */
   Result[] value() default {};
 }

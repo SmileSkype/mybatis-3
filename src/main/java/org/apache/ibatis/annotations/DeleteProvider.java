@@ -23,12 +23,18 @@ import java.lang.annotation.Target;
 
 /**
  * @author Clinton Begin
+ * 删除语句提供器
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface DeleteProvider {
+  /**
+   * @return 提供的类
+   */
   Class<?> type();
-
+  /**
+   * @return 提供的方法
+   */
   String method();
 }

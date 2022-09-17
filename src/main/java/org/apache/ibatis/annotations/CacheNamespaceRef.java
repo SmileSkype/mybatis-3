@@ -15,6 +15,8 @@
  */
 package org.apache.ibatis.annotations;
 
+import org.apache.ibatis.builder.annotation.MapperAnnotationBuilder;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -28,18 +30,22 @@ import java.lang.annotation.Target;
  * </p>
  * @author Clinton Begin
  * @author Kazuki Shimizu
+ * 指向指定命名空间的注解 对应 XML 标签为 <cache-ref />
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target(ElementType.TYPE) // 类型
 public @interface CacheNamespaceRef {
   /**
+   * org.apache.ibatis.builder.annotation.MapperAnnotationBuilder
    * A namespace type to reference a cache (the namespace name become a FQCN of specified type)
+   * 见 {@link org.apache.ibatis.builder.annotation.MapperAnnotationBuilder#parseCacheRef()} 方法
    */
   Class<?> value() default void.class;
   /**
    * A namespace name to reference a cache
    * @since 3.4.2
+   * 指向的命名空间
    */
   String name() default "";
 }

@@ -23,12 +23,18 @@ import java.lang.annotation.Target;
 
 /**
  * @author Clinton Begin
+ * 更新语句提供器
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface UpdateProvider {
+  /**
+   * @return 提供的类
+   */
   Class<?> type();
-
+  /**
+   * @return 提供的方法
+   */
   String method();
 }
