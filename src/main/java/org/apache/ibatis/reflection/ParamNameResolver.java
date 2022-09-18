@@ -125,6 +125,7 @@ public class ParamNameResolver {
    * ...).
    * </p>
    * 获得参数名与值的映射
+   * http://static.iocoder.cn/images/MyBatis/2020_02_07/03.png
    */
   public Object getNamedParams(Object[] args) {
     final int paramCount = names.size();
@@ -141,13 +142,13 @@ public class ParamNameResolver {
       final Map<String, Object> param = new ParamMap<>();
       int i = 0;
       for (Map.Entry<Integer, String> entry : names.entrySet()) {
-        // 组合 1 ：添加到 param 中
+        // 组合 1 ：添加到 param 中  0：第一个参数的值  1：第二个参数的值
         param.put(entry.getValue(), args[entry.getKey()]);
         // add generic param names (param1, param2, ...)
         final String genericParamName = GENERIC_NAME_PREFIX + String.valueOf(i + 1);
         // ensure not to overwrite parameter named with @Param
         if (!names.containsValue(genericParamName)) {
-          // 组合 2 ：添加到 param 中
+          // 组合 2 ：添加到 param 中  param1:第一个参数的值  param2:第二个参数的值
           param.put(genericParamName, args[entry.getKey()]);
         }
         i++;

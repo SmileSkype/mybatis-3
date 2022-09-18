@@ -40,10 +40,16 @@ import java.util.*;
  * @author Eduardo Macarron
  * @author Lasse Voss
  * @author Kazuki Shimizu
+ * Mapper方法,在Mapper接口中,每个定义的方法都对应一个MapperMethod对象
  */
 public class MapperMethod {
-
+  /**
+   * SqlCommand 对象
+   */
   private final SqlCommand command;
+  /**
+   * MethodSignature 对象
+   */
   private final MethodSignature method;
 
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
@@ -213,28 +219,46 @@ public class MapperMethod {
 
   }
 
+  /**
+   * 内部静态类  SQL命令
+   */
   public static class SqlCommand {
-
+    /**
+     * {@link MappedStatement#getId()}
+     * 方法获得的标识。实际上，就是 ${NAMESPACE_NAME}.${语句_ID}，
+     * 例如："org.apache.ibatis.autoconstructor.AutoConstructorMapper.getSubject2" 。
+     */
     private final String name;
+    /**
+     * SQL 命令类型  org.apache.ibatis.mapping.SqlCommandType INSERT, UPDATE, DELETE, SELECT, FLUSH
+     */
     private final SqlCommandType type;
 
     public SqlCommand(Configuration configuration, Class<?> mapperInterface, Method method) {
       final String methodName = method.getName();
       final Class<?> declaringClass = method.getDeclaringClass();
+      // <1> 获得 MappedStatement 对象
       MappedStatement ms = resolveMappedStatement(mapperInterface, methodName, declaringClass,
           configuration);
+      // <2> 找不到 MappedStatement
       if (ms == null) {
+        // 如果有 @Flush 注解，则标记为 FLUSH 类型
         if(method.getAnnotation(Flush.class) != null){
           name = null;
           type = SqlCommandType.FLUSH;
         } else {
+          // 抛出 BindingException 异常，如果找不到 MappedStatement
           throw new BindingException("Invalid bound statement (not found): "
               + mapperInterface.getName() + "." + methodName);
         }
       } else {
+        // <3> 找到 MappedStatement  则初始化 name 和 type 属性。
+        // 获得 name
         name = ms.getId();
+        // 获得 type
         type = ms.getSqlCommandType();
         if (type == SqlCommandType.UNKNOWN) {
+          // 抛出 BindingException 异常，如果是 UNKNOWN 类型
           throw new BindingException("Unknown execution method for: " + name);
         }
       }
@@ -248,14 +272,32 @@ public class MapperMethod {
       return type;
     }
 
+    /**
+     * 获得MappedStatement 对象
+     * @param mapperInterface mapper接口
+     * @param methodName 方法名称
+     * @param declaringClass 方法的声明类
+     * @param configuration 配置
+     * <1> 处，获得编号。这个编号，和我们上文提到的 ${NAMESPACE_NAME}.${语句_ID}  例如： "org.apache.ibatis.autoconstructor.AutoConstructorMapper.getSubject2"
+     * <2> 处，通过 Configuration#hasStatement(String statementId) 方法，判断是否有 MappedStatement 。如果有，
+     *         则调用 Configuration#getMappedStatement(String statementId) 方法，获得 MappedStatement 对象。
+     *         关于 Configuration ，我们在后续的文章中，详细解析。在这里，胖友只需要知道，
+     *         Configuration 里缓存了所有的 MappedStatement ，并且每一个 XML 里声明的例如 <select /> 或者 <update /> 等等，都对应一个 MappedStatement 对象。
+     * <3> 处，如果没有，并且当前方法就是 declaringClass 声明的，则说明真的找不到
+     * <4> 处，遍历父接口，递归继续获得 MappedStatement 对象。因为，该该方法定义在父接口中
+     */
     private MappedStatement resolveMappedStatement(Class<?> mapperInterface, String methodName,
         Class<?> declaringClass, Configuration configuration) {
+      // <1> 获得编号 ${NAMESPACE_NAME}.${语句_ID} 例如： "org.apache.ibatis.autoconstructor.AutoConstructorMapper.getSubject2"
       String statementId = mapperInterface.getName() + "." + methodName;
+      // <2> 如果configuration有，获得 MappedStatement 对象，并返回
       if (configuration.hasStatement(statementId)) {
         return configuration.getMappedStatement(statementId);
       } else if (mapperInterface.equals(declaringClass)) {
+        // <3> 如果没有，并且当前方法就是 declaringClass 声明的，则说明真的找不到
         return null;
       }
+      // <4> 遍历父接口，继续获得 MappedStatement 对象
       for (Class<?> superInterface : mapperInterface.getInterfaces()) {
         if (declaringClass.isAssignableFrom(superInterface)) {
           MappedStatement ms = resolveMappedStatement(superInterface, methodName,
@@ -265,43 +307,97 @@ public class MapperMethod {
           }
         }
       }
+      // 真的找不到，返回 null
       return null;
     }
   }
 
+  /**
+   * 是 MapperMethod 的内部静态类，方法签名
+   */
   public static class MethodSignature {
-
+    /**
+     * 返回类型是否为集合
+     */
     private final boolean returnsMany;
+    /**
+     * 返回类型是否为 Map
+     */
     private final boolean returnsMap;
+    /**
+     * 返回类型是否为 void
+     */
     private final boolean returnsVoid;
+    /**
+     * 返回类型是否为 {@link org.apache.ibatis.cursor.Cursor}
+     */
     private final boolean returnsCursor;
+    /**
+     * 返回类型是否为 {@link java.util.Optional}
+     */
     private final boolean returnsOptional;
+    /**
+     * 返回类型
+     */
     private final Class<?> returnType;
+    /**
+     * 返回方法上的 {@link MapKey#value()} ，前提是返回类型为 Map
+     */
     private final String mapKey;
+    /**
+     * 获得 {@link ResultHandler} 在方法参数中的位置。
+     *
+     * 如果为 null ，说明不存在这个类型
+     */
     private final Integer resultHandlerIndex;
+    /**
+     * 获得 {@link RowBounds} 在方法参数中的位置。
+     *
+     * 如果为 null ，说明不存在这个类型
+     */
     private final Integer rowBoundsIndex;
+    /**
+     * ParamNameResolver 对象
+     */
     private final ParamNameResolver paramNameResolver;
 
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {
+      // 初始化 returnType 属性
       Type resolvedReturnType = TypeParameterResolver.resolveReturnType(method, mapperInterface);
+      // 普通类
       if (resolvedReturnType instanceof Class<?>) {
         this.returnType = (Class<?>) resolvedReturnType;
       } else if (resolvedReturnType instanceof ParameterizedType) {
+        // 泛型
         this.returnType = (Class<?>) ((ParameterizedType) resolvedReturnType).getRawType();
       } else {
+        // 内部类等等
         this.returnType = method.getReturnType();
       }
+      // 初始化 returnsVoid 属性
       this.returnsVoid = void.class.equals(this.returnType);
+      // 初始化 returnsMany 属性
       this.returnsMany = configuration.getObjectFactory().isCollection(this.returnType) || this.returnType.isArray();
+      // 初始化 returnsCursor 属性
       this.returnsCursor = Cursor.class.equals(this.returnType);
+      // 初始化 returnsOptional 属性
       this.returnsOptional = Optional.class.equals(this.returnType);
+      // <1> 初始化 mapKey 获得注解的 {@link MapKey#value()}
       this.mapKey = getMapKey(method);
+      // 初始化 returnsMap
       this.returnsMap = this.mapKey != null;
+      // <2> 初始化 rowBoundsIndex、resultHandlerIndex 获得指定参数类型在方法参数中的位置
       this.rowBoundsIndex = getUniqueParamIndex(method, RowBounds.class);
       this.resultHandlerIndex = getUniqueParamIndex(method, ResultHandler.class);
+      // 初始化 paramNameResolver
       this.paramNameResolver = new ParamNameResolver(configuration, method);
     }
 
+    /**
+     * 获得SQL通用参数
+     * @param args
+     * @return
+     */
     public Object convertArgsToSqlCommandParam(Object[] args) {
       return paramNameResolver.getNamedParams(args);
     }
@@ -355,14 +451,24 @@ public class MapperMethod {
       return returnsOptional;
     }
 
+    /**
+     * 获得指定参数类型在方法参数中的位置
+     * @param method
+     * @param paramType
+     * @return
+     */
     private Integer getUniqueParamIndex(Method method, Class<?> paramType) {
       Integer index = null;
+      // 遍历方法参数
       final Class<?>[] argTypes = method.getParameterTypes();
       for (int i = 0; i < argTypes.length; i++) {
+        // 类型符合
         if (paramType.isAssignableFrom(argTypes[i])) {
           if (index == null) {
+            // 获得第一次的位置
             index = i;
           } else {
+            // 如果重复类型了，则抛出 BindingException 异常
             throw new BindingException(method.getName() + " cannot have multiple " + paramType.getSimpleName() + " parameters");
           }
         }
@@ -370,10 +476,18 @@ public class MapperMethod {
       return index;
     }
 
+    /**
+     * 获得注解的 {@link MapKey#value()}
+     * @param method
+     * @return
+     */
     private String getMapKey(Method method) {
       String mapKey = null;
+      // 返回类型为 Map
       if (Map.class.isAssignableFrom(method.getReturnType())) {
+        // 返回类型为 Map
         final MapKey mapKeyAnnotation = method.getAnnotation(MapKey.class);
+        // 获得 @MapKey 注解的键
         if (mapKeyAnnotation != null) {
           mapKey = mapKeyAnnotation.value();
         }
