@@ -98,7 +98,9 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
  * @author Clinton Begin
  */
 public class Configuration {
-
+  /**
+   * DB Environment 对象
+   */
   protected Environment environment;
 
   protected boolean safeRowBoundsEnabled;
@@ -115,6 +117,9 @@ public class Configuration {
 
   protected String logPrefix;
   protected Class <? extends Log> logImpl;
+  /**
+   * VFS 实现类
+   */
   protected Class <? extends VFS> vfsImpl;
   protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
   protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
@@ -124,15 +129,30 @@ public class Configuration {
   protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;
   protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;
   protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;
-
+  /**
+   * 变量 Properties 对象。
+   *
+   * 参见 {@link org.apache.ibatis.builder.xml.XMLConfigBuilder#propertiesElement(XNode context)} 方法
+   */
   protected Properties variables = new Properties();
+  /**
+   * ReflectorFactory 对象
+   */
   protected ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+  /**
+   * ObjectFactory 对象
+   */
   protected ObjectFactory objectFactory = new DefaultObjectFactory();
+  /**
+   * ObjectWrapperFactory 对象
+   */
   protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
   protected boolean lazyLoadingEnabled = false;
   protected ProxyFactory proxyFactory = new JavassistProxyFactory(); // #224 Using internal Javassist instead of OGNL
-
+  /**
+   * 数据库标识
+   */
   protected String databaseId;
   /**
    * Configuration factory class.
@@ -141,8 +161,13 @@ public class Configuration {
    * @see <a href='https://code.google.com/p/mybatis/issues/detail?id=300'>Issue 300 (google code)</a>
    */
   protected Class<?> configurationFactory;
-
+  /**
+   * MapperRegistry 对象
+   */
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
+  /**
+   * 拦截器链
+   */
   protected final InterceptorChain interceptorChain = new InterceptorChain();
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry();
   protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
@@ -233,9 +258,14 @@ public class Configuration {
     return this.vfsImpl;
   }
 
+  /**
+   *  设置 vfsImpl 属性
+   */
   public void setVfsImpl(Class<? extends VFS> vfsImpl) {
     if (vfsImpl != null) {
+      // 设置 vfsImpl 属性
       this.vfsImpl = vfsImpl;
+      // 添加到 VFS 中的自定义 VFS 类的集合
       VFS.addImplClass(this.vfsImpl);
     }
   }
@@ -730,6 +760,10 @@ public class Configuration {
     return sqlFragments;
   }
 
+  /**
+   * 添加到interceptorChain
+   * @param interceptor
+   */
   public void addInterceptor(Interceptor interceptor) {
     interceptorChain.addInterceptor(interceptor);
   }
@@ -739,6 +773,7 @@ public class Configuration {
   }
 
   public void addMappers(String packageName) {
+    // 扫描该包下所有的 Mapper 接口，并添加到 mapperRegistry 中
     mapperRegistry.addMappers(packageName);
   }
 

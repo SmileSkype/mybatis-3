@@ -15,5 +15,6 @@
  */
 /**
  * Base package for mapping.
+ * 主要是SQL操作解析后的映射
  */
 package org.apache.ibatis.mapping;
