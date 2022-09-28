@@ -94,7 +94,7 @@ public class XMLConfigBuilder extends BaseBuilder {
   }
 
   private XMLConfigBuilder(XPathParser parser, String environment, Properties props) {
-    // <1> 创建 Configuration 对象
+    // <1> 创建 Configuration 对象,然后初始化一些默认的映射,例如： JDBC ---> JdbcTransactionFactory
     super(new Configuration());
     ErrorContext.instance().resource("SQL Mapper Configuration");
     // <2> 设置 Configuration 的 variables 属性

@@ -15,5 +15,7 @@
  */
 /**
  * Parses XML files to create a Configuration
+ * Mybatis初始化流程解析图片示例
+ *      http://static.iocoder.cn/images/MyBatis/2020_02_13/01.png
  */
 package org.apache.ibatis.builder.xml;
