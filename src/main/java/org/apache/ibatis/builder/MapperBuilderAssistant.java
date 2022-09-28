@@ -315,6 +315,30 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return new Discriminator.Builder(configuration, resultMapping, namespaceDiscriminatorMap).build();
   }
 
+  /**
+   * 构建 MappedStatement 对象
+   * @param id
+   * @param sqlSource
+   * @param statementType
+   * @param sqlCommandType
+   * @param fetchSize
+   * @param timeout
+   * @param parameterMap
+   * @param parameterType
+   * @param resultMap
+   * @param resultType
+   * @param resultSetType
+   * @param flushCache
+   * @param useCache
+   * @param resultOrdered
+   * @param keyGenerator
+   * @param keyProperty
+   * @param keyColumn
+   * @param databaseId
+   * @param lang
+   * @param resultSets
+   * @return
+   */
   public MappedStatement addMappedStatement(
       String id,
       SqlSource sqlSource,
@@ -337,13 +361,15 @@ public class MapperBuilderAssistant extends BaseBuilder {
       LanguageDriver lang,
       String resultSets) {
 
+    // <1> 如果想要的 Cache 未解析，抛出 IncompleteElementException 异常
     if (unresolvedCacheRef) {
       throw new IncompleteElementException("Cache-ref not yet resolved");
     }
-
+    // <2> 获得 id 编号，格式为 `${namespace}.${id}`
     id = applyCurrentNamespace(id, false);
     boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
 
+    // <3> 创建 MappedStatement.Builder 对象
     MappedStatement.Builder statementBuilder = new MappedStatement.Builder(configuration, id, sqlSource, sqlCommandType)
         .resource(resource)
         .fetchSize(fetchSize)
@@ -361,13 +387,14 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .flushCacheRequired(valueOrDefault(flushCache, !isSelect))
         .useCache(valueOrDefault(useCache, isSelect))
         .cache(currentCache);
-
+    // <3.2> 获得 ParameterMap ，并设置到 MappedStatement.Builder 中
     ParameterMap statementParameterMap = getStatementParameterMap(parameterMap, parameterType, id);
     if (statementParameterMap != null) {
       statementBuilder.parameterMap(statementParameterMap);
     }
-
+    // <4> 创建 MappedStatement 对象
     MappedStatement statement = statementBuilder.build();
+    // <5> 添加到 configuration 中
     configuration.addMappedStatement(statement);
     return statement;
   }
@@ -376,12 +403,21 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return value == null ? defaultValue : value;
   }
 
+  /**
+   * 获得 ParameterMap 对象
+   * @param parameterMapName
+   * @param parameterTypeClass
+   * @param statementId
+   * @return
+   */
   private ParameterMap getStatementParameterMap(
       String parameterMapName,
       Class<?> parameterTypeClass,
       String statementId) {
+    // 获得 ParameterMap 的编号，格式为 `${namespace}.${parameterMapName}`
     parameterMapName = applyCurrentNamespace(parameterMapName, true);
     ParameterMap parameterMap = null;
+    // <2> 如果 parameterMapName 非空，则获得 parameterMapName 对应的 ParameterMap 对象
     if (parameterMapName != null) {
       try {
         parameterMap = configuration.getParameterMap(parameterMapName);
@@ -389,6 +425,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         throw new IncompleteElementException("Could not find parameter map " + parameterMapName, e);
       }
     } else if (parameterTypeClass != null) {
+      // <1> 如果 parameterTypeClass 非空，则创建 ParameterMap 对象
       List<ParameterMapping> parameterMappings = new ArrayList<>();
       parameterMap = new ParameterMap.Builder(
           configuration,
@@ -399,13 +436,25 @@ public class MapperBuilderAssistant extends BaseBuilder {
     return parameterMap;
   }
 
+  /**
+   * 获得 ResultMap 集合
+   * @param resultMap
+   * @param resultType
+   * @param statementId
+   * @return
+   * 方法参数 resultMap 存在使用逗号分隔的情况。这个出现在使用存储过程的时候
+   *      https://blog.csdn.net/sinat_25295611/article/details/75103358
+   */
   private List<ResultMap> getStatementResultMaps(
       String resultMap,
       Class<?> resultType,
       String statementId) {
+    // 获得 resultMap 的编号
     resultMap = applyCurrentNamespace(resultMap, true);
 
+    // 创建 ResultMap 集合
     List<ResultMap> resultMaps = new ArrayList<>();
+    // 如果 resultMap 非空，则获得 resultMap 对应的 ResultMap 对象(们）
     if (resultMap != null) {
       String[] resultMapNames = resultMap.split(",");
       for (String resultMapName : resultMapNames) {
@@ -416,6 +465,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         }
       }
     } else if (resultType != null) {
+      // 如果 resultType 非空，则创建 ResultMap 对象
       ResultMap inlineResultMap = new ResultMap.Builder(
           configuration,
           statementId + "-Inline",
@@ -570,12 +620,18 @@ public class MapperBuilderAssistant extends BaseBuilder {
         nestedResultMap, notNullColumn, columnPrefix, typeHandler, flags, null, null, configuration.isLazyLoadingEnabled());
   }
 
+  /**
+   * 获得 LanguageDriver 对象
+   */
   public LanguageDriver getLanguageDriver(Class<? extends LanguageDriver> langClass) {
+    // 获得 langClass 类
     if (langClass != null) {
       configuration.getLanguageRegistry().register(langClass);
     } else {
+      // 如果为空，则使用默认类
       langClass = configuration.getLanguageRegistry().getDefaultDriverClass();
     }
+    // 获得 LanguageDriver 对象
     return configuration.getLanguageRegistry().getDriver(langClass);
   }
 

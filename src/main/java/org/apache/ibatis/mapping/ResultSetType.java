@@ -19,6 +19,9 @@ import java.sql.ResultSet;
 
 /**
  * @author Clinton Begin
+ *
+ * 可参看 http://jinguo.iteye.com/blog/365373
+ * {@link ResultSet} 的枚举值
  */
 public enum ResultSetType {
   /**
