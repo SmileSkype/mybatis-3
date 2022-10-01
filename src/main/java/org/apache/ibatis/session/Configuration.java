@@ -202,7 +202,10 @@ public class Configuration {
 
   /**
    * 已加载资源( Resource )集合
+   * xml形式
    * key:  namespace: + 真实的namespace
+   * 注解形式???
+   * key:  com.smile.skype.learnmybatis.dao.EmployeeMapperAnnotation
    */
   protected final Set<String> loadedResources = new HashSet<>();
   /**
@@ -224,6 +227,9 @@ public class Configuration {
    * ResultMapResolver 集合
    */
   protected final Collection<ResultMapResolver> incompleteResultMaps = new LinkedList<>();
+  /**
+   * Mapper注解形式时,会用到 未完成的 MethodResolver 集合
+   */
   protected final Collection<MethodResolver> incompleteMethods = new LinkedList<>();
 
   /*

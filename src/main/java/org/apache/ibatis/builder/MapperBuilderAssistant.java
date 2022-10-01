@@ -60,7 +60,8 @@ public class MapperBuilderAssistant extends BaseBuilder {
    */
   private String currentNamespace;
   /**
-   * 资源引用的地址
+   * 接口类 XXXMapper
+   * 资源引用的地址 resource = type.getName().replace('.', '/') + ".java (best guess)";
    */
   private final String resource;
   /**

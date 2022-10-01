@@ -551,7 +551,7 @@ public class XMLConfigBuilder extends BaseBuilder {
             // 执行解析
             mapperParser.parse();
           } else if (resource == null && url == null && mapperClass != null) {
-            // <4> 使用映射器接口实现类的完全限定类名
+            // <4> 使用映射器接口实现类的完全限定类名  用MapperAnnotationBuilde来解析
             // 获得 Mapper 接口
             Class<?> mapperInterface = Resources.classForName(mapperClass);
             // 添加到 configuration 中
