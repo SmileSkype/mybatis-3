@@ -15,5 +15,8 @@
  */
 /**
  * Base package for languages.
+ * 根据用户传入的实参,解析映射文件中定义的动态SQL节点,并形成数据库可执行的SQL语句
+ * 之后会处理SQL语句中的占位符,绑定用户传入的实参
+ *      http://www.mybatis.org/mybatis-3/zh/dynamic-sql.html
  */
 package org.apache.ibatis.scripting;

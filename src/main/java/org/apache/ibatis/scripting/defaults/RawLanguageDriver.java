@@ -28,18 +28,23 @@ import org.apache.ibatis.session.Configuration;
  *
  * @since 3.2.0
  * @author Eduardo Macarron
+ * 继承 XMLLanguageDriver 类，RawSqlSource 语言驱动器实现类，
+ * 确保创建的 SqlSource 是 RawSqlSource 类
  */
 public class RawLanguageDriver extends XMLLanguageDriver {
 
   @Override
   public SqlSource createSqlSource(Configuration configuration, XNode script, Class<?> parameterType) {
+    // 调用父类，创建 SqlSource 对象
     SqlSource source = super.createSqlSource(configuration, script, parameterType);
+    // 校验创建的是 RawSqlSource 对象
     checkIsNotDynamic(source);
     return source;
   }
 
   @Override
   public SqlSource createSqlSource(Configuration configuration, String script, Class<?> parameterType) {
+    // 调用父类，创建 SqlSource 对象
     SqlSource source = super.createSqlSource(configuration, script, parameterType);
     checkIsNotDynamic(source);
     return source;
