@@ -19,5 +19,16 @@ package org.apache.ibatis.mapping;
  * @author Clinton Begin
  */
 public enum ParameterMode {
-  IN, OUT, INOUT
+  /**
+   * 输入  只需要关注 IN 的情况
+   */
+  IN,
+  /**
+   * 输出
+   */
+  OUT,
+  /**
+   * IN + OUT
+   */
+  INOUT
 }
