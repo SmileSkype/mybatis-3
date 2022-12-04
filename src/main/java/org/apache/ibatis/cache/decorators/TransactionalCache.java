@@ -35,14 +35,29 @@ import org.apache.ibatis.logging.LogFactory;
  *
  * @author Clinton Begin
  * @author Eduardo Macarron
+ * 实现 Cache 接口，支持事务的 Cache 实现类，主要用于二级缓存中
  */
 public class TransactionalCache implements Cache {
 
   private static final Log log = LogFactory.getLog(TransactionalCache.class);
-
+  /**
+   * 委托的 Cache 对象。
+   * 实际上，就是二级缓存 Cache 对象。
+   */
   private final Cache delegate;
+  /**
+   * 提交时，清空 {@link #delegate}
+   * 初始时，该值为 false
+   * 清理后{@link #clear()} 时，该值为 true ，表示持续处于清空状态
+   */
   private boolean clearOnCommit;
+  /**
+   * 待提交的 KV 映射
+   */
   private final Map<Object, Object> entriesToAddOnCommit;
+  /**
+   * 查找不到的 KEY 集合
+   */
   private final Set<Object> entriesMissedInCache;
 
   public TransactionalCache(Cache delegate) {
@@ -65,14 +80,21 @@ public class TransactionalCache implements Cache {
   @Override
   public Object getObject(Object key) {
     // issue #116
+    // <1> 从 delegate 中获取 key 对应的 value
     Object object = delegate.getObject(key);
+    // <2> 如果不存在，则添加到 entriesMissedInCache 中
     if (object == null) {
       entriesMissedInCache.add(key);
     }
     // issue #146
+    /**
+     * <3> 如果 clearOnCommit 为 true ，表示处于持续清空状态，则返回 null 因为在事务未结束前，我们执行的清空缓存操作不好同步到 delegate 中，
+     * 所以只好通过 clearOnCommit 来标记处于清空状态。那么，如果处于该状态，自然就不能返回 delegate 中查找的结果
+      */
     if (clearOnCommit) {
       return null;
     } else {
+      // <4> 返回 value
       return object;
     }
   }
@@ -84,43 +106,68 @@ public class TransactionalCache implements Cache {
 
   @Override
   public void putObject(Object key, Object object) {
+    // 暂存 KV 到 entriesToAddOnCommit 中
     entriesToAddOnCommit.put(key, object);
   }
 
+  /**
+   * 沒看懂
+   * @param key The key
+   * @return
+   */
   @Override
   public Object removeObject(Object key) {
     return null;
   }
 
+  /**
+   * 该方法，不会清空 delegate 的缓存。真正的清空，在事务提交时
+   */
   @Override
   public void clear() {
+    // <1> 标记 clearOnCommit 为 true
     clearOnCommit = true;
+    // <2> 清空 entriesToAddOnCommit
     entriesToAddOnCommit.clear();
   }
 
+  /**
+   * 提交事务
+   */
   public void commit() {
+    // <1> 如果 clearOnCommit 为 true ，则清空 delegate 缓存
     if (clearOnCommit) {
       delegate.clear();
     }
+    // 将 entriesToAddOnCommit、entriesMissedInCache 刷入 delegate 中
     flushPendingEntries();
+    // 重置
     reset();
   }
 
   public void rollback() {
+    // <1> 从 delegate 移除出 entriesMissedInCache
     unlockMissedEntries();
     reset();
   }
 
+  /**
+   *  一个 Executor 可以提交多次事务，而 TransactionalCache 需要被重用，那么就需要重置回初始状态
+   */
   private void reset() {
+    // 重置 clearOnCommit 为 false
     clearOnCommit = false;
+    // 清空 entriesToAddOnCommit、entriesMissedInCache
     entriesToAddOnCommit.clear();
     entriesMissedInCache.clear();
   }
 
   private void flushPendingEntries() {
+    // 将 entriesToAddOnCommit 刷入 delegate 中
     for (Map.Entry<Object, Object> entry : entriesToAddOnCommit.entrySet()) {
       delegate.putObject(entry.getKey(), entry.getValue());
     }
+    // 将 entriesMissedInCache 刷入 delegate 中
     for (Object entry : entriesMissedInCache) {
       if (!entriesToAddOnCommit.containsKey(entry)) {
         delegate.putObject(entry, null);
@@ -128,6 +175,9 @@ public class TransactionalCache implements Cache {
     }
   }
 
+  /**
+   * 即使事务回滚，也不妨碍在事务的执行过程中，发现 entriesMissedInCache 不存在对应的缓存
+   */
   private void unlockMissedEntries() {
     for (Object entry : entriesMissedInCache) {
       try {

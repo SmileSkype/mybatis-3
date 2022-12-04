@@ -68,7 +68,7 @@ public final class MappedStatement {
    */
   private SqlSource sqlSource;
   /**
-   * Cache 对象
+   * Cache 对象  每个 XML Mapper 或 Mapper 接口的每个 SQL 操作声明，对应一个 MappedStatement 对象。通过 @CacheNamespace 或 <cache /> 来声明，创建其所使用的 Cache 对象；也可以通过 @CacheNamespaceRef 或 <cache-ref /> 来声明，使用指定 Namespace 的 Cache 对象
    */
   private Cache cache;
   /**

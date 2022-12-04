@@ -121,6 +121,9 @@ public class Configuration {
    * VFS 实现类
    */
   protected Class <? extends VFS> vfsImpl;
+  /**
+   * {@link BaseExecutor} 本地缓存范围
+   */
   protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
   protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
   protected Set<String> lazyLoadTriggerMethods = new HashSet<>(Arrays.asList("equals", "clone", "hashCode", "toString"));
@@ -184,6 +187,8 @@ public class Configuration {
 
   /**
    * id: namespace  value: namespace对应的Cache
+   *
+   * 通过在 mybatis-config.xml 中，配置如下开启二级缓存功能  <setting name="cacheEnabled" value="true"/>
    */
   protected final Map<String, Cache> caches = new StrictMap<>("Caches collection");
   /**
@@ -650,10 +655,19 @@ public class Configuration {
     return newExecutor(transaction, defaultExecutorType);
   }
 
+  /**
+   * 创建 Executor 对象
+   *
+   * @param transaction 事务对象
+   * @param executorType 执行器类型
+   * @return Executor 对象
+   */
   public Executor newExecutor(Transaction transaction, ExecutorType executorType) {
+    // <1> 获得执行器类型  value 有三种类型：SIMPLE REUSE BATCH <setting name="defaultExecutorType" value="" />
     executorType = executorType == null ? defaultExecutorType : executorType;
     executorType = executorType == null ? ExecutorType.SIMPLE : executorType;
     Executor executor;
+    // <2> 创建对应实现的 Executor 对象 创建对应实现的 Executor 对象。默认为 SimpleExecutor 对象。
     if (ExecutorType.BATCH == executorType) {
       executor = new BatchExecutor(this, transaction);
     } else if (ExecutorType.REUSE == executorType) {
@@ -661,9 +675,11 @@ public class Configuration {
     } else {
       executor = new SimpleExecutor(this, transaction);
     }
+    // <3> 如果开启缓存，创建 CachingExecutor 对象，进行包装
     if (cacheEnabled) {
       executor = new CachingExecutor(executor);
     }
+    // <4> 应用插件
     executor = (Executor) interceptorChain.pluginAll(executor);
     return executor;
   }

@@ -35,9 +35,21 @@ import org.apache.ibatis.transaction.Transaction;
 
 /**
  * @author Clinton Begin
+ * 继承 BaseExecutor 抽象类，可重用的 Executor 实现类
+ *    每次执行读/写操作,优先从缓存中获取对应的Statement对象,如果不存在,才进行创建
+ *    执行完毕后,不关闭Statement对象
+ *    其他的和 SimpleExecutor保持一致
+ *
+ * ReuseExecutor 考虑到重用性，但是 Statement 最终还是需要有地方关闭。答案就在 #doFlushStatements(boolean isRollback) 方法中。
+ * 而 BaseExecutor 在关闭 #close() 方法中，最终也会调用该方法，从而完成关闭缓存的 Statement 对象们
+ * 另外，BaseExecutor 在提交或者回滚事务方法中，最终也会调用该方法，也能完成关闭缓存的 Statement 对象们
  */
 public class ReuseExecutor extends BaseExecutor {
 
+  /**
+   * Statement 的缓存
+   * KEY ：SQL
+   */
   private final Map<String, Statement> statementMap = new HashMap<>();
 
   public ReuseExecutor(Configuration configuration, Transaction transaction) {
@@ -47,52 +59,84 @@ public class ReuseExecutor extends BaseExecutor {
   @Override
   public int doUpdate(MappedStatement ms, Object parameter) throws SQLException {
     Configuration configuration = ms.getConfiguration();
+    // 创建 StatementHandler 对象
     StatementHandler handler = configuration.newStatementHandler(this, ms, parameter, RowBounds.DEFAULT, null, null);
+    // 初始化 Statement 对象
     Statement stmt = prepareStatement(handler, ms.getStatementLog());
+    // 执行 StatementHandler 进行写操作
     return handler.update(stmt);
   }
 
   @Override
   public <E> List<E> doQuery(MappedStatement ms, Object parameter, RowBounds rowBounds, ResultHandler resultHandler, BoundSql boundSql) throws SQLException {
     Configuration configuration = ms.getConfiguration();
+    // 创建 StatementHandler 对象
     StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, resultHandler, boundSql);
+    // 初始化 StatementHandler 对象
     Statement stmt = prepareStatement(handler, ms.getStatementLog());
+    // 执行 StatementHandler 进行读操作
     return handler.query(stmt, resultHandler);
   }
 
   @Override
   protected <E> Cursor<E> doQueryCursor(MappedStatement ms, Object parameter, RowBounds rowBounds, BoundSql boundSql) throws SQLException {
     Configuration configuration = ms.getConfiguration();
+    // 创建 StatementHandler 对象
     StatementHandler handler = configuration.newStatementHandler(wrapper, ms, parameter, rowBounds, null, boundSql);
+    // 创建 Statement 对象
     Statement stmt = prepareStatement(handler, ms.getStatementLog());
+    // 执行 StatementHandler 进行读操作
     return handler.queryCursor(stmt);
   }
 
+  /**
+   * ReuseExecutor 考虑到重用性，但是 Statement 最终还是需要有地方关闭。答案就在 #doFlushStatements(boolean isRollback) 方法中。
+   * 而 BaseExecutor 在关闭 #close() 方法中，最终也会调用该方法，从而完成关闭缓存的 Statement 对象们
+   * 另外，BaseExecutor 在提交或者回滚事务方法中，最终也会调用该方法，也能完成关闭缓存的 Statement 对象们
+   * @param isRollback
+   * @return
+   */
   @Override
   public List<BatchResult> doFlushStatements(boolean isRollback) {
+    // 关闭缓存的 Statement 对象们
     for (Statement stmt : statementMap.values()) {
       closeStatement(stmt);
     }
     statementMap.clear();
+    // 返回空集合
     return Collections.emptyList();
   }
 
+  /**
+   * 和SimpleExecutor差异的地方
+   */
   private Statement prepareStatement(StatementHandler handler, Log statementLog) throws SQLException {
     Statement stmt;
     BoundSql boundSql = handler.getBoundSql();
     String sql = boundSql.getSql();
+    // 存在
     if (hasStatementFor(sql)) {
+      // <1.1> 从缓存中获得 Statement 或 PrepareStatement 对象
       stmt = getStatement(sql);
+      // <1.2> 设置事务超时时间
       applyTransactionTimeout(stmt);
     } else {
+      // 不存在
+      // <2.1> 获得 Connection 对象
       Connection connection = getConnection(statementLog);
+      // <2.2> 创建 Statement 或 PrepareStatement 对象
       stmt = handler.prepare(connection, transaction.getTimeout());
+      // <2.3> 添加到缓存中
       putStatement(sql, stmt);
     }
+    // <2> 设置 SQL 上的参数，例如 PrepareStatement 对象上的占位符
     handler.parameterize(stmt);
     return stmt;
   }
 
+  /**
+   * 判断是否存在对应的 Statement 对象,并且要求连接未关闭
+   */
   private boolean hasStatementFor(String sql) {
     try {
       return statementMap.keySet().contains(sql) && !statementMap.get(sql).getConnection().isClosed();
@@ -101,10 +145,16 @@ public class ReuseExecutor extends BaseExecutor {
     }
   }
 
+  /**
+   * 获得Statement对象
+   */
   private Statement getStatement(String s) {
     return statementMap.get(s);
   }
 
+  /**
+   * 添加到缓存中
+   */
   private void putStatement(String sql, Statement stmt) {
     statementMap.put(sql, stmt);
   }
