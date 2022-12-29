@@ -22,11 +22,20 @@ import org.apache.ibatis.mapping.MappedStatement;
 
 /**
  * @author Clinton Begin
+ * 主键生成器接口,目前Mybatis默认的KeyGenerator实现类,都是基于数据库来实现主键自增的功能
  */
 public interface KeyGenerator {
-
+  /**
+   *  SQL执行之前
+   *  @Options(useGeneratedKeys = true, keyProperty = "id")
+   *  @Insert({"insert into country (countryname,countrycode) values (#{countryname},#{countrycode})"})
+   *  int insertBean(Country country);
+   *  country方法参数,就是一个parameter参数,KeyGenerator在获取到主键后,会设置回parameter参数的对应属性
+    */
   void processBefore(Executor executor, MappedStatement ms, Statement stmt, Object parameter);
-
+  /**
+   *  SQL执行之后
+   */
   void processAfter(Executor executor, MappedStatement ms, Statement stmt, Object parameter);
 
 }
