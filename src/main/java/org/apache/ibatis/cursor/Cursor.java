@@ -24,23 +24,27 @@ import java.io.Closeable;
  * using the id columns of the resultMap.
  *
  * @author Guillaume Darmont / guillaume@dropinocean.com
+ * 继承 Closeable、Iterable 接口，游标接口
  */
 public interface Cursor<T> extends Closeable, Iterable<T> {
 
     /**
      * @return true if the cursor has started to fetch items from database.
+     * 是否处于打开状态
      */
     boolean isOpen();
 
     /**
      *
      * @return true if the cursor is fully consumed and has returned all elements matching the query.
+     * 是否全部消费完成
      */
     boolean isConsumed();
 
     /**
      * Get the current item index. The first item has the index 0.
      * @return -1 if the first cursor item has not been retrieved. The index of the current item retrieved.
+     * 获得当前索引
      */
     int getCurrentIndex();
 }

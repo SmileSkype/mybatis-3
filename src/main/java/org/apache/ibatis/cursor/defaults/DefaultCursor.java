@@ -33,6 +33,7 @@ import java.util.NoSuchElementException;
  * This implementation is not thread safe.
  *
  * @author Guillaume Darmont / guillaume@dropinocean.com
+ * 实现 Cursor 接口，默认 Cursor 实现类
  */
 public class DefaultCursor<T> implements Cursor<T> {
 
@@ -41,14 +42,30 @@ public class DefaultCursor<T> implements Cursor<T> {
   private final ResultMap resultMap;
   private final ResultSetWrapper rsw;
   private final RowBounds rowBounds;
+  /**
+   * ObjectWrapperResultHandler 对象
+   */
   private final ObjectWrapperResultHandler<T> objectWrapperResultHandler = new ObjectWrapperResultHandler<>();
-
+  /**
+   * CursorIterator 对象，游标迭代器。
+   */
   private final CursorIterator cursorIterator = new CursorIterator();
+  /**
+   * 是否开始迭代
+   *
+   * {@link #iterator()}
+   */
   private boolean iteratorRetrieved;
-
+  /**
+   * 游标状态
+   */
   private CursorStatus status = CursorStatus.CREATED;
+  /**
+   * 已完成映射的行数
+   */
   private int indexWithRowBound = -1;
 
+  //  DefaultCursor 的内部枚举类
   private enum CursorStatus {
 
     /**
@@ -61,10 +78,12 @@ public class DefaultCursor<T> implements Cursor<T> {
     OPEN,
     /**
      * A closed cursor, not fully consumed
+     * 已关闭，并未完全消费
      */
     CLOSED,
     /**
      * A fully consumed cursor, a consumed cursor is always closed
+     * 已关闭，并且完全消费
      */
     CONSUMED
   }
@@ -91,14 +110,17 @@ public class DefaultCursor<T> implements Cursor<T> {
     return rowBounds.getOffset() + cursorIterator.iteratorIndex;
   }
 
+  // 获取迭代器  通过 iteratorRetrieved 属性，保证有且仅返回一次 cursorIterator 对象
   @Override
   public Iterator<T> iterator() {
+    // 如果已经获取，则抛出 IllegalStateException 异常
     if (iteratorRetrieved) {
       throw new IllegalStateException("Cannot open more than one iterator on a Cursor");
     }
     if (isClosed()) {
       throw new IllegalStateException("A Cursor is already closed.");
     }
+    // 标记已经获取
     iteratorRetrieved = true;
     return cursorIterator;
   }
@@ -121,39 +143,56 @@ public class DefaultCursor<T> implements Cursor<T> {
     }
   }
 
+  /**
+   * 遍历下一条记录
+   * @return
+   */
   protected T fetchNextUsingRowBound() {
+    // <1> 遍历下一条记录
     T result = fetchNextObjectFromDatabase();
+    // 循环跳过 rowBounds 的索引
     while (result != null && indexWithRowBound < rowBounds.getOffset()) {
       result = fetchNextObjectFromDatabase();
     }
+    // 返回记录
     return result;
   }
 
+  /**
+   * 遍历下一条记录
+   * @return
+   */
   protected T fetchNextObjectFromDatabase() {
+    // <1> 如果已经关闭，返回 null
     if (isClosed()) {
       return null;
     }
 
     try {
+      // <2> 设置状态为 CursorStatus.OPEN
       status = CursorStatus.OPEN;
+      // <3> 遍历下一条记录
       if (!rsw.getResultSet().isClosed()) {
         resultSetHandler.handleRowValues(rsw, resultMap, objectWrapperResultHandler, RowBounds.DEFAULT, null);
       }
     } catch (SQLException e) {
       throw new RuntimeException(e);
     }
-
+    // <4> 复制给 next
     T next = objectWrapperResultHandler.result;
+    // <5> 增加 indexWithRowBound
     if (next != null) {
       indexWithRowBound++;
     }
     // No more object or limit reached
+    // <6> 没有更多记录，或者到达 rowBounds 的限制索引位置，则关闭游标，并设置状态为 CursorStatus.CONSUMED
     if (next == null || getReadItemsCount() == rowBounds.getOffset() + rowBounds.getLimit()) {
       close();
       status = CursorStatus.CONSUMED;
     }
+    // <7> 置空 objectWrapperResultHandler.result 属性
     objectWrapperResultHandler.result = null;
-
+    // <8> 返回下一条结果
     return next;
   }
 
@@ -165,51 +204,78 @@ public class DefaultCursor<T> implements Cursor<T> {
     return indexWithRowBound + 1;
   }
 
+  // DefaultCursor 的内部静态类，实现 ResultHandler 接口
   private static class ObjectWrapperResultHandler<T> implements ResultHandler<T> {
-
+    /**
+     * 结果对象
+     */
     private T result;
 
     @Override
     public void handleResult(ResultContext<? extends T> context) {
+      // <1> 设置结果对象
       this.result = context.getResultObject();
+      /**
+       * 通过调用 ResultContext#stop() 方法，暂停 DefaultResultSetHandler 在向下遍历下一条记录，
+       * 从而实现每次在调用 CursorIterator#hasNext() 方法，只遍历一行 ResultSet 的记录
+       *
+       * DefaultResultSetHandler#shouldProcessMoreRows(ResultContext<?> context, RowBounds rowBounds)
+       */
       context.stop();
     }
   }
 
+  // DefaultCursor 的内部类，实现 Iterator 接口，游标的迭代器实现类
   private class CursorIterator implements Iterator<T> {
 
     /**
      * Holder for the next object to be returned
+     * 结果对象，提供给 {@link #next()} 返回
      */
     T object;
 
     /**
      * Index of objects returned using next(), and as such, visible to users.
+     * 索引位置
      */
     int iteratorIndex = -1;
 
     @Override
     public boolean hasNext() {
+      /**
+       *  <1> 如果 object 为空，则遍历下一条记录
+       *  也就是说，该方法是先获取下一条记录，然后在判断是否存在下一条记录。
+       *  实际上，和 java.util.ResultSet 的方式，是一致的。如果再调用一次该方法，则不会去遍历下一条记录
+       */
       if (object == null) {
         object = fetchNextUsingRowBound();
       }
+      // <2> 判断 object 是否非空
       return object != null;
     }
 
     @Override
     public T next() {
-      // Fill next with object fetched from hasNext()
+      // <3> Fill next with object fetched from hasNext()
       T next = object;
-
+      /**
+       *  <4> 如果 next 为空，则遍历下一条记录
+       *  如果 next 为空，有两种可能性：1）使用方未调用 #hasNext() 方法；2）调用 #hasNext() 方法，发现没下一条，还是调用了 #next() 方法。
+       *  如果 next() 方法为空，通过“再次”调用 #fetchNextUsingRowBound() 方法，去遍历下一条记录
+       */
       if (next == null) {
         next = fetchNextUsingRowBound();
       }
-
+      // <5> 如果 next 非空，说明有记录，则进行返回
       if (next != null) {
+        // <5.1> 置空 object 对象
         object = null;
+        // <5.2> 增加 iteratorIndex
         iteratorIndex++;
+        // <5.3> 返回 next
         return next;
       }
+      // <6> 如果 next 为空，说明没有记录，抛出 NoSuchElementException 异常
       throw new NoSuchElementException();
     }
 
