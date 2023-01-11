@@ -1001,7 +1001,11 @@ public class DefaultResultSetHandler implements ResultSetHandler {
         final ResultLoader resultLoader = new ResultLoader(configuration, executor, nestedQuery, nestedQueryParameterObject, targetType, key, nestedBoundSql);
         // <3.2> 如果要求延迟加载，则延迟加载
         if (propertyMapping.isLazy()) {
-          // 如果该属性配置了延迟加载，则将其添加到 `ResultLoader.loaderMap` 中，等待真正使用时再执行嵌套查询并得到结果对象。
+          /**
+           * 如果该属性配置了延迟加载，则将其添加到 `ResultLoader.loaderMap` 中，等待真正使用时再执行嵌套查询并得到结果对象。
+           * 因为是结果对象的 setting 方法中使用的值，可以使用延迟加载的功能，所以使用 ResultLoaderMap 记录。
+           * 最终会创建结果对象的代理对象，而 ResultLoaderMap 对象会传入其中，作为一个参数。从而能够，在加载该属性时，能够调用 ResultLoader#loadResult() 方法，加载结果
+           */
           lazyLoader.addLoader(property, metaResultObject, resultLoader);
           // 返回已定义
           value = DEFERRED;
