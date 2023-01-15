@@ -833,9 +833,11 @@ public class Configuration {
   }
 
   public MappedStatement getMappedStatement(String id, boolean validateIncompleteStatements) {
+    // 校验，保证所有 MappedStatement 已经构造完毕
     if (validateIncompleteStatements) {
       buildAllStatements();
     }
+    // 获取 MappedStatement 对象
     return mappedStatements.get(id);
   }
 
@@ -891,16 +893,20 @@ public class Configuration {
    * Parses all the unprocessed statement nodes in the cache. It is recommended
    * to call this method once all the mappers are added as it provides fail-fast
    * statement validation.
+   * 解析缓存中所有未处理的语句节点。建议在添加所有映射器后调用此方法，因为它提供了快速故障语句验证
+   * 保证所有的MapperStatement已经构造完毕
    */
   protected void buildAllStatements() {
     parsePendingResultMaps();
     if (!incompleteCacheRefs.isEmpty()) {
       synchronized (incompleteCacheRefs) {
+        // 保证 incompleteCacheRefs 被解析完
         incompleteCacheRefs.removeIf(x -> x.resolveCacheRef() != null);
       }
     }
     if (!incompleteStatements.isEmpty()) {
       synchronized (incompleteStatements) {
+        // 保证 incompleteStatements 被解析完
         incompleteStatements.removeIf(x -> {
           x.parseStatementNode();
           return true;
@@ -909,6 +915,7 @@ public class Configuration {
     }
     if (!incompleteMethods.isEmpty()) {
       synchronized (incompleteMethods) {
+        // 保证 incompleteMethods 被解析完
         incompleteMethods.removeIf(x -> {
           x.resolve();
           return true;
@@ -917,6 +924,9 @@ public class Configuration {
     }
   }
 
+  /**
+   * 解析待处理的ResultMap
+   */
   private void parsePendingResultMaps() {
     if (incompleteResultMaps.isEmpty()) {
       return;

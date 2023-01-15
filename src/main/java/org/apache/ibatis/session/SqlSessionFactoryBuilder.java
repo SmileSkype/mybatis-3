@@ -29,6 +29,9 @@ import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
  * Builds {@link SqlSession} instances.
  *
  * @author Clinton Begin
+ *
+ * SqlSessionFactory 构造器
+ * 提供了各种 build 的重载方法，核心的套路都是解析出 Configuration 配置对象，从而创建出 DefaultSqlSessionFactory 对象
  */
 public class SqlSessionFactoryBuilder {
 
@@ -113,6 +116,11 @@ public class SqlSessionFactoryBuilder {
     }
   }
 
+  /**
+   * 创建 DefaultSqlSessionFactory 对象
+   * @param config Configuration 对象
+   * @return DefaultSqlSessionFactory 对象
+   */
   public SqlSessionFactory build(Configuration config) {
     return new DefaultSqlSessionFactory(config);
   }
