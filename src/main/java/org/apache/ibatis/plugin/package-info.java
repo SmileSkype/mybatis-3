@@ -15,5 +15,6 @@
  */
 /**
  * Base package for handing plugins.
+ * Mybatis 插件体系
  */
 package org.apache.ibatis.plugin;
